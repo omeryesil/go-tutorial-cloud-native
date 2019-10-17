@@ -29,7 +29,7 @@ func port() string {
 	port := os.Getenv("NATIVE_APP_PORT")
 
 	if len(port) == 0 {
-		return ":8000"
+		return ":8080"
 	}
 
 	return ":" + port

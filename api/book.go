@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"io/ioutil"
 )
 
 //Book model
@@ -51,6 +52,12 @@ func BooksHandleFunc(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		books := AllBooks()
 		writeJSON(w, books)
+		
+	case http.MethodPost:
+		defer r.Body.Close()
+		body, _ := ioutil.ReadAll(r.Body)
+		AddBook(w, body)
+
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Unsupported request method"))
@@ -66,9 +73,8 @@ func BookHandleFunc(w http.ResponseWriter, r *http.Request) {
 		book := mockedBooksRepo[isbn]
 		writeJSON(w, []Book{book})
 
-	case http.MethodPost:
-
 	case http.MethodDelete:
+		DeleteBook(w, r.URL.Query()["isbn"][0])
 	}
 
 	booksInJSON, err := json.Marshal(mockedBooksRepo)
@@ -93,6 +99,29 @@ func AllBooks() []Book {
 	return books
 }
 
+func AddBook(w http.ResponseWriter, data []byte) {
+	book := fromJSON(data)
+
+	_, ok := mockedBooksRepo[book.ISBN]
+
+	if ok {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Book already exists"))
+		return
+	}
+
+	mockedBooksRepo[book.ISBN] = book
+
+	writeJSON(w, []Book{book})
+}
+
+func DeleteBook(w http.ResponseWriter, isbn string) {
+	delete (mockedBooksRepo, isbn)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+
 func writeJSON(w http.ResponseWriter, books []Book) {
 	booksInJSON, err := json.Marshal(books)
 
@@ -102,3 +131,5 @@ func writeJSON(w http.ResponseWriter, books []Book) {
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	w.Write(booksInJSON)
 }
+
+
